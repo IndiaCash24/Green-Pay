@@ -7,12 +7,13 @@ import {
   ArrowRight,
   IndianRupee,
   Calendar,
+  Clock,
 } from "lucide-react";
 import { useAppContext, EMIInstallment } from "../context/AppContext";
 import { Screen } from "../App";
 
 export default function Repayment({ onBack, onNavigate, onSetPaymentData }: { onBack: () => void, onNavigate: (s: Screen) => void, onSetPaymentData: (data: {loanId: string, emiIds: string[], amount: number}) => void }) {
-  const { userLoan, payEMIs } = useAppContext();
+  const { userLoan, payEMIs, paymentRequests } = useAppContext();
   const [selectedEmis, setSelectedEmis] = useState<string[]>([]);
 
   if (!userLoan || userLoan.status !== "approved" || !userLoan.schedule) {
@@ -58,7 +59,10 @@ export default function Repayment({ onBack, onNavigate, onSetPaymentData }: { on
     );
   }
 
-  const pendingEmis = userLoan.schedule.filter((e) => e.status === "pending");
+  const pendingPaymentRequests = paymentRequests.filter(req => req.status === "pending" && req.loanId === userLoan.id);
+  const processingEmiIds = pendingPaymentRequests.flatMap(req => req.emiIds);
+
+  const pendingEmis = userLoan.schedule.filter((e) => e.status === "pending" && !processingEmiIds.includes(e.id));
   const nextEmi = pendingEmis.length > 0 ? pendingEmis[0] : null;
 
   const handleSelectEmi = (id: string) => {
@@ -222,15 +226,18 @@ export default function Repayment({ onBack, onNavigate, onSetPaymentData }: { on
           <div className="space-y-3">
             {userLoan.schedule.map((emi, index) => {
               const isPaid = emi.status === "paid";
+              const isProcessing = processingEmiIds.includes(emi.id);
               const isSelected = selectedEmis.includes(emi.id);
 
               return (
                 <div
                   key={emi.id}
-                  onClick={() => !isPaid && handleSelectEmi(emi.id)}
-                  className={`bg-white rounded-[16px] p-4 border transition-all cursor-pointer flex items-center gap-4 shadow-sm ${
+                  onClick={() => !isPaid && !isProcessing && handleSelectEmi(emi.id)}
+                  className={`bg-white rounded-[16px] p-4 border transition-all ${!isPaid && !isProcessing ? 'cursor-pointer' : ''} flex items-center gap-4 shadow-sm ${
                     isPaid
                       ? "border-gray-100 opacity-60"
+                      : isProcessing
+                        ? "border-blue-100 opacity-80"
                       : isSelected
                         ? "border-[#0b8a40] ring-1 ring-[#0b8a40]/30 shadow-[0_4px_12px_rgb(11,138,64,0.1)]"
                         : "border-white hover:border-gray-200 hover:shadow-md ring-1 ring-gray-100"
@@ -239,6 +246,8 @@ export default function Repayment({ onBack, onNavigate, onSetPaymentData }: { on
                   <div className="shrink-0">
                     {isPaid ? (
                       <CheckCircle2 size={24} className="text-[#0b8a40]" />
+                    ) : isProcessing ? (
+                      <Clock size={24} className="text-blue-400" />
                     ) : isSelected ? (
                       <CheckCircle2
                         size={24}
@@ -256,7 +265,7 @@ export default function Repayment({ onBack, onNavigate, onSetPaymentData }: { on
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
                       <span
-                        className={`text-[11px] font-bold px-2 py-0.5 rounded-[6px] ${isPaid ? "bg-gray-100 text-gray-500" : "bg-orange-50 text-orange-600"}`}
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded-[6px] ${isPaid ? "bg-gray-100 text-gray-500" : isProcessing ? "bg-blue-50 text-blue-500" : "bg-orange-50 text-orange-600"}`}
                       >
                         Month {emi.month}
                       </span>
@@ -277,9 +286,9 @@ export default function Repayment({ onBack, onNavigate, onSetPaymentData }: { on
                         ₹{emi.amount.toLocaleString("en-IN")}
                       </span>
                       <span
-                        className={`text-[11px] font-bold uppercase tracking-wider ${isPaid ? "text-[#0b8a40]" : "text-gray-400"}`}
+                        className={`text-[11px] font-bold uppercase tracking-wider ${isPaid ? "text-[#0b8a40]" : isProcessing ? "text-blue-500" : "text-gray-400"}`}
                       >
-                        {isPaid ? "Paid" : "Pending"}
+                        {isPaid ? "Paid" : isProcessing ? "Processing" : "Pending"}
                       </span>
                     </div>
                   </div>
