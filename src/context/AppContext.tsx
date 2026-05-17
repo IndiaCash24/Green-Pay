@@ -309,8 +309,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   ) => {
     const schedule = Array.from({ length: durationMonths }).map((_, i) => {
       const dueDate = new Date();
-      dueDate.setMonth(dueDate.getMonth() + i + 1);
-      dueDate.setDate(5); // 5th of every month
+      dueDate.setDate(dueDate.getDate() + 30 * (i + 1));
       return {
         id: `emi-${i + 1}-${Date.now()}`,
         month: i + 1,
