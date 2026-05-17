@@ -26,6 +26,7 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     approveLoan,
     rejectLoan,
     updateLoan,
+    sendNotificationToUser,
     appSettings,
     updateAppSettings,
     users,
@@ -310,6 +311,12 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                                         updateLoan(currentLoan.id, {
                                             amount, durationMonths, processingFee, gst, netDisbursal, emi, totalRepayable
                                         });
+                                        sendNotificationToUser(currentLoan.userId, {
+                                          title: "Loan Details Updated",
+                                          message: "Your loan details have been updated by the admin.",
+                                          date: new Date().toISOString(),
+                                          read: false
+                                        });
                                         setEditingUserLoanId(null);
                                         alert("Loan details updated successfully!");
                                      }}
@@ -463,18 +470,29 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     <div className="flex justify-between items-center mb-4 bg-slate-50 p-3 rounded-xl border border-slate-100">
                       <div>
                         <p className="text-[11px] font-semibold text-slate-500 mb-0.5">
-                          EMI Paid
+                          Amount
                         </p>
                         <p className="text-[17px] font-bold text-slate-800">
-                          ₹{req.amount.toLocaleString()}
+                          ₹{req.amount?.toLocaleString()}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="text-[11px] font-semibold text-slate-500 mb-0.5">
+                          UTR Number
+                        </p>
+                        <p className="text-[14px] font-bold text-indigo-600 tracking-wider">
+                          {req.utr}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="text-left">
+                        <p className="text-[11px] font-semibold text-slate-500 mb-0.5">
                           Payment Date
                         </p>
-                        <p className="text-[14px] font-bold text-slate-700 flex items-center justify-end">
-                          <Clock size={14} className="mr-1.5 text-slate-400" />
+                        <p className="text-[13px] font-bold text-slate-700 flex items-center">
+                          <Clock size={12} className="mr-1.5 text-slate-400" />
                           {new Date(req.date).toLocaleDateString("en-GB", {
                             day: "2-digit",
                             month: "short",
@@ -487,14 +505,14 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                     {req.status === "pending" && (
                       <div className="flex space-x-3 mt-auto">
                         <button
-                          onClick={() => approvePayment(req.id)}
+                          onClick={() => approvePayment(req.id, req)}
                           className="flex-1 flex items-center justify-center space-x-1.5 rounded-[12px] bg-[#0b8a40] py-2.5 font-bold text-white transition hover:bg-[#0a7a38] active:scale-[0.98] shadow-[0_4px_10px_rgb(11,138,64,0.2)]"
                         >
                           <CheckCircle size={18} />
                           <span>Verify</span>
                         </button>
                         <button
-                          onClick={() => rejectPayment(req.id)}
+                          onClick={() => rejectPayment(req.id, req)}
                           className="flex-1 flex items-center justify-center space-x-1.5 rounded-[12px] bg-red-50 py-2.5 font-bold text-red-600 transition hover:bg-red-100 border border-red-100 active:scale-[0.98]"
                         >
                           <XCircle size={18} />

@@ -15,8 +15,7 @@ export default function MyLoanDetails({ onBack }: { onBack: () => void }) {
   const { loanRequests, currentUser } = useAppContext();
   
   const userLoans = loanRequests.filter((l) => l.userId === currentUser.id);
-  const activeUserLoan = userLoans.find(l => l.status === "pending" || (l.status === "approved" && l.schedule?.some(emi => emi.status === "pending")));
-  const userLoan = activeUserLoan || userLoans[userLoans.length - 1];
+  const userLoan = userLoans.find(l => l.status === "pending" || (l.status === "approved" && l.schedule?.some(emi => emi.status === "pending")));
 
   if (!userLoan) {
     return (

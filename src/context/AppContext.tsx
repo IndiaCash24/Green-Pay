@@ -16,6 +16,9 @@ export interface PaymentRequest {
   userId: string;
   userName: string;
   amount: number;
+  utr: string;
+  loanId: string;
+  emiIds: string[];
   date: string;
   status: "pending" | "approved" | "rejected";
 }
@@ -69,12 +72,14 @@ interface AppContextType {
   currentUser: User;
   notifications: Notification[];
   addNotification: (notification: Omit<Notification, "id">) => void;
+  sendNotificationToUser: (userId: string, notification: Omit<Notification, "id" | "userId">) => void;
   markAsRead: (id: string) => void;
   unreadCount: number;
 
   paymentRequests: PaymentRequest[];
-  approvePayment: (id: string) => void;
-  rejectPayment: (id: string) => void;
+  approvePayment: (id: string, req: PaymentRequest) => Promise<void>;
+  rejectPayment: (id: string, req: PaymentRequest) => Promise<void>;
+  submitPaymentRequest: (req: Omit<PaymentRequest, "id" | "status">) => Promise<void>;
 
   loanRequests: LoanRequest[];
   userLoan: LoanRequest | undefined;
@@ -207,6 +212,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [currentUser.id]);
 
+  const sendNotificationToUser = async (userId: string, notification: Omit<Notification, "id" | "userId">) => {
+    try {
+      await addDoc(collection(db, "notifications"), {
+        ...notification,
+        userId
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const addNotification = async (notification: Omit<Notification, "id">) => {
     if (currentUser.id === "anonymous") return;
     try {
@@ -227,17 +243,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const approvePayment = async (id: string) => {
+  const submitPaymentRequest = async (req: Omit<PaymentRequest, "id" | "status">) => {
+    try {
+      await addDoc(collection(db, "payment_requests"), { ...req, status: "pending", date: new Date().toISOString() });
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  };
+
+  const approvePayment = async (id: string, req: PaymentRequest) => {
     try {
       await updateDoc(doc(db, "payment_requests", id), { status: "approved" });
+      await payEMIs(req.loanId, req.emiIds);
+      await addPaymentHistory({
+        userId: req.userId,
+        amount: req.amount,
+        date: new Date().toISOString(),
+        utr: req.utr,
+        loanId: req.loanId,
+        emiIds: req.emiIds
+      });
+      // Add a notification for the user
+      await addDoc(collection(db, "notifications"), {
+        userId: req.userId,
+        title: "Payment Approved!",
+        message: `Your payment of ₹${req.amount} (UTR: ${req.utr}) has been approved.`,
+        date: new Date().toISOString(),
+        read: false
+      });
     } catch (e) {
       console.error(e);
     }
   };
 
-  const rejectPayment = async (id: string) => {
+  const rejectPayment = async (id: string, req: PaymentRequest) => {
     try {
       await updateDoc(doc(db, "payment_requests", id), { status: "rejected" });
+      // Add a notification for the user
+      await addDoc(collection(db, "notifications"), {
+        userId: req.userId,
+        title: "Payment Rejected",
+        message: `Your payment of ₹${req.amount} (UTR: ${req.utr}) was rejected. Please re-verify.`,
+        date: new Date().toISOString(),
+        read: false
+      });
     } catch (e) {
       console.error(e);
     }
@@ -403,11 +453,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         currentUser,
         notifications,
         addNotification,
+        sendNotificationToUser,
         markAsRead,
         unreadCount,
         paymentRequests,
         approvePayment,
         rejectPayment,
+        submitPaymentRequest,
         loanRequests,
         userLoan,
         applyLoan,

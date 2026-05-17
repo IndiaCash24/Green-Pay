@@ -13,41 +13,73 @@ export default function PaymentGateway({
   onBack: () => void,
   onNavigate: (s: Screen) => void
 }) {
-  const { payEMIs, addPaymentHistory, currentUser, appSettings } = useAppContext();
+  const { submitPaymentRequest, paymentRequests, paymentHistory, currentUser, appSettings } = useAppContext();
   const [utrNumber, setUtrNumber] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleDone = async () => {
     if (utrNumber.trim().length < 12) {
       setErrorMsg('Please enter a valid 12-digit UTR number');
       return;
     }
+    
+    // Check for duplicate UTR
+    const isDuplicatePending = paymentRequests.some(req => req.utr === utrNumber.trim());
+    const isDuplicateHistory = paymentHistory.some(ph => ph.utr === utrNumber.trim());
+    
+    if (isDuplicatePending || isDuplicateHistory) {
+      setErrorMsg('This UTR number has already been submitted. Please check your payment history or use a different UTR.');
+      return;
+    }
+    
     setErrorMsg('');
     setIsSubmitting(true);
 
     try {
-      // Create payment history record
-      await addPaymentHistory({
+      await submitPaymentRequest({
         userId: currentUser.id,
+        userName: currentUser.name,
         amount: paymentData.amount,
-        date: new Date().toISOString(),
-        utr: utrNumber,
+        utr: utrNumber.trim(),
         loanId: paymentData.loanId,
         emiIds: paymentData.emiIds
       });
 
-      // Update EMIs to paid status
-      await payEMIs(paymentData.loanId, paymentData.emiIds);
-      
-      // Navigate to payment history
-      onNavigate('payment-history');
+      setShowSuccess(true);
+      setTimeout(() => {
+        onNavigate('home');
+      }, 3000);
     } catch (e) {
       setErrorMsg('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (showSuccess) {
+    return (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex h-full w-full flex-col items-center justify-center bg-[#0b8a40] px-5 text-center"
+      >
+        <motion.div
+           initial={{ scale: 0.5, opacity: 0 }}
+           animate={{ scale: 1, opacity: 1 }}
+           transition={{ type: "spring", stiffness: 200, damping: 20 }}
+           className="bg-white rounded-full p-6 mb-6 shadow-2xl"
+        >
+          <CheckCircle2 size={80} className="text-[#0b8a40]" />
+        </motion.div>
+        <h1 className="text-[32px] font-black text-white tracking-tight mb-2">Payment Submitted!</h1>
+        <p className="text-white/90 text-[16px] font-medium leading-relaxed max-w-[280px]">
+          Your UTR number <span className="font-bold">{utrNumber}</span> has been received. Admin will verify and update your loan details shortly.
+        </p>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div 
