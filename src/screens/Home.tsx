@@ -17,6 +17,7 @@ import {
   Clock,
   XCircle,
   IndianRupee,
+  Info,
 } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 import { useState, useEffect } from "react";
@@ -33,30 +34,63 @@ export default function Home({
   const { unreadCount, currentUser, userLoan, applyLoan } = useAppContext();
   const [showSecureBanner, setShowSecureBanner] = useState(true);
 
-  const [loanAmount, setLoanAmount] = useState<number>(30000);
-  const [loanMonths, setLoanMonths] = useState<number>(12);
+  const [loanAmount, setLoanAmount] = useState<string>("30000");
+  const [loanMonths, setLoanMonths] = useState<string>("12");
+  
+  const [amountError, setAmountError] = useState<string>("");
+  const [monthsError, setMonthsError] = useState<string>("");
 
   useEffect(() => {
     const limit = currentUser.maxLoanLimit || 100000;
-    if (loanAmount > limit) {
-      setLoanAmount(limit);
+    const currentAmount = Number(loanAmount);
+    if (!isNaN(currentAmount) && currentAmount > limit) {
+      setLoanAmount(limit.toString());
+      setAmountError(`Maximum loan limit is ₹${limit.toLocaleString("en-IN")}`);
+    } else {
+      setAmountError("");
     }
   }, [currentUser.maxLoanLimit, loanAmount]);
 
-  const processingFee = Math.round(loanAmount * 0.03); // 3% processing fee
+  const numAmount = Number(loanAmount) || 0;
+  const numMonths = Number(loanMonths) || 1;
+
+  const processingFee = Math.round(numAmount * 0.03); // 3% processing fee
   const gst = Math.round(processingFee * 0.18); // 18% GST on processing fee
-  const netDisbursal = loanAmount - processingFee - gst;
+  const netDisbursal = numAmount - processingFee - gst;
 
   // 39.2% APR calculation
   const monthlyInterestRate = 0.392 / 12;
   const emi = Math.round(
-    (loanAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, loanMonths)) /
-    (Math.pow(1 + monthlyInterestRate, loanMonths) - 1)
+    (numAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numMonths)) /
+    (Math.pow(1 + monthlyInterestRate, numMonths) - 1)
   );
-  const totalRepayable = emi * loanMonths;
+  const totalRepayable = emi * numMonths;
+
+  const handleAmountChange = (val: string) => {
+    setLoanAmount(val);
+    const num = Number(val);
+    const max = currentUser.maxLoanLimit || 100000;
+    if (val.trim() === "") setAmountError("Amount is required");
+    else if (isNaN(num)) setAmountError("Enter a valid number");
+    else if (num < 500) setAmountError("Minimum amount is ₹500");
+    else if (num > max) setAmountError(`Maximum limit is ₹${max.toLocaleString("en-IN")}`);
+    else setAmountError("");
+  };
+
+  const handleMonthsChange = (val: string) => {
+    setLoanMonths(val);
+    const num = Number(val);
+    if (val.trim() === "") setMonthsError("Tenure is required");
+    else if (isNaN(num)) setMonthsError("Enter a valid number");
+    else if (num < 1) setMonthsError("Minimum tenure is 1 month");
+    else if (num > 12) setMonthsError("Maximum tenure is 12 months");
+    else setMonthsError("");
+  };
 
   const handleApply = () => {
-    applyLoan(loanAmount, loanMonths, processingFee, gst, netDisbursal, emi, totalRepayable);
+    if (amountError || monthsError || !loanAmount || !loanMonths) return;
+    
+    applyLoan(numAmount, numMonths, processingFee, gst, netDisbursal, emi, totalRepayable);
   };
 
   return (
@@ -70,7 +104,7 @@ export default function Home({
         <div className="flex justify-between items-start relative z-10">
           <div>
             <p className="text-[13px] text-green-100 flex items-center gap-1 font-medium tracking-wide">
-              Good Morning, <span className="text-lg">👋</span>
+              {new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening'}, <span className="text-lg">👋</span>
             </p>
             <h1 className="text-[22px] font-bold mt-0.5 text-white tracking-tight">
               {currentUser.name}
@@ -129,56 +163,71 @@ export default function Home({
             <div className="space-y-6">
               <div>
                 <div className="flex justify-between items-end mb-3">
-                  <label className="text-[13px] font-bold text-gray-700">
+                  <label className="flex items-center gap-1.5 text-[13px] font-bold text-gray-700" title="The principal amount you wish to borrow. It must be between ₹500 and your approved max limit.">
                     Loan Amount
+                    <Info size={14} className="text-gray-400" />
                   </label>
-                  <span className="text-[18px] font-bold text-[#0b8a40] bg-green-50 px-3 py-1 rounded-[10px]">
-                    ₹ {loanAmount.toLocaleString("en-IN")}
-                  </span>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                    <input
+                      type="number"
+                      value={loanAmount}
+                      onChange={(e) => handleAmountChange(e.target.value)}
+                      className={`w-28 text-right bg-green-50 text-[#0b8a40] font-bold text-[16px] px-3 py-1.5 rounded-[10px] outline-none border focus:border-[#0b8a40] transition ${amountError ? 'border-red-500 text-red-600 bg-red-50' : 'border-transparent'}`}
+                    />
+                  </div>
                 </div>
                 <input
                   type="range"
                   min="500"
                   max={currentUser.maxLoanLimit || 100000}
                   step="500"
-                  value={loanAmount}
-                  onChange={(e) => setLoanAmount(Number(e.target.value))}
+                  value={numAmount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0b8a40]"
                 />
                 <div className="flex justify-between text-[11px] text-gray-400 font-medium mt-2">
                   <span>₹500</span>
                   <span>₹{((currentUser.maxLoanLimit || 100000) / 1000)}K</span>
                 </div>
+                {amountError && <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1"><XCircle size={14} />{amountError}</p>}
               </div>
 
               <div>
                 <div className="flex justify-between items-end mb-3">
-                  <label className="text-[13px] font-bold text-gray-700">
+                  <label className="flex items-center gap-1.5 text-[13px] font-bold text-gray-700" title="The duration over which you intend to repay the loan. Longer tenure means smaller EMIs but more total interest.">
                     Tenure (Months)
+                    <Info size={14} className="text-gray-400" />
                   </label>
-                  <span className="text-[16px] font-bold text-[#0b8a40] bg-green-50 px-3 py-1 rounded-[10px]">
-                    {loanMonths} Months
-                  </span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={loanMonths}
+                      onChange={(e) => handleMonthsChange(e.target.value)}
+                      className={`w-24 text-right pr-2 bg-green-50 text-[#0b8a40] font-bold text-[16px] px-3 py-1.5 rounded-[10px] outline-none border focus:border-[#0b8a40] transition ${monthsError ? 'border-red-500 text-red-600 bg-red-50' : 'border-transparent'}`}
+                    />
+                  </div>
                 </div>
                 <input
                   type="range"
                   min="1"
                   max="12"
                   step="1"
-                  value={loanMonths}
-                  onChange={(e) => setLoanMonths(Number(e.target.value))}
+                  value={numMonths}
+                  onChange={(e) => handleMonthsChange(e.target.value)}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0b8a40]"
                 />
                 <div className="flex justify-between text-[11px] text-gray-400 font-medium mt-2">
                   <span>1 Month</span>
                   <span>12 Months</span>
                 </div>
+                {monthsError && <p className="text-red-500 text-xs font-bold mt-2 flex items-center gap-1"><XCircle size={14} />{monthsError}</p>}
               </div>
 
               <div className="bg-slate-50 border border-slate-100 rounded-[14px] p-4 space-y-3">
                 <div className="flex justify-between items-center px-1">
                   <span className="text-[12px] font-medium text-gray-500">Loan Amount</span>
-                  <span className="text-[13px] font-bold text-gray-900">₹{loanAmount.toLocaleString("en-IN")}</span>
+                  <span className="text-[13px] font-bold text-gray-900">₹{numAmount.toLocaleString("en-IN")}</span>
                 </div>
                 <div className="flex justify-between items-center px-1">
                   <span className="text-[12px] font-medium text-gray-500">Processing Fee (3%)</span>
@@ -208,12 +257,13 @@ export default function Home({
                     Est. EMI
                   </p>
                   <p className="text-[18px] font-bold text-gray-900">
-                    ₹{emi.toLocaleString("en-IN")}/mo
+                    ₹{(isNaN(emi) || !isFinite(emi) ? 0 : emi).toLocaleString("en-IN")}/mo
                   </p>
                 </div>
                 <button
                   onClick={handleApply}
-                  className="bg-[#0b8a40] text-white font-bold py-3.5 px-8 rounded-[14px] hover:bg-[#0a7a38] active:scale-95 transition shadow-[0_8px_20px_rgb(11,138,64,0.25)] flex items-center gap-2"
+                  disabled={!!amountError || !!monthsError}
+                  className={`font-bold py-3.5 px-8 rounded-[14px] transition flex items-center gap-2 ${amountError || monthsError ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#0b8a40] text-white hover:bg-[#0a7a38] active:scale-95 shadow-[0_8px_20px_rgb(11,138,64,0.25)]'}`}
                 >
                   Apply Now
                 </button>
