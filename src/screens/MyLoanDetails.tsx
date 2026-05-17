@@ -38,7 +38,7 @@ export default function MyLoanDetails({ onBack }: { onBack: () => void }) {
           <div className="bg-white p-8 rounded-[24px] shadow-sm border border-slate-100 max-w-sm w-full mx-auto">
             <Receipt className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <h2 className="text-[18px] font-bold text-slate-800 mb-2">No Active Loans</h2>
-            <p className="text-[14px] text-slate-500 font-medium">You haven't applied for any loans yet.</p>
+            <p className="text-[14px] text-slate-500 font-medium">You don't have any active loans right now.</p>
           </div>
         </div>
       </motion.div>

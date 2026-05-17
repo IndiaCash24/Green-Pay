@@ -134,8 +134,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         if (unsubUserDoc) unsubUserDoc();
         unsubUserDoc = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-          if (docSnap.exists() && docSnap.data().name) {
-             setCurrentUser(prev => ({ ...prev, name: docSnap.data().name }));
+          if (docSnap.exists()) {
+             const data = docSnap.data();
+             setCurrentUser(prev => ({ 
+                ...prev, 
+                name: data.name || prev.name,
+                maxLoanLimit: data.maxLoanLimit 
+             }));
           }
         }, (err) => console.error("Error fetching user data:", err));
       } else {
