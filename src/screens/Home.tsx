@@ -138,15 +138,15 @@ export default function Home({
                 </div>
                 <input
                   type="range"
-                  min="5000"
+                  min="500"
                   max={currentUser.maxLoanLimit || 100000}
-                  step="1000"
+                  step="500"
                   value={loanAmount}
                   onChange={(e) => setLoanAmount(Number(e.target.value))}
                   className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0b8a40]"
                 />
                 <div className="flex justify-between text-[11px] text-gray-400 font-medium mt-2">
-                  <span>₹5K</span>
+                  <span>₹500</span>
                   <span>₹{((currentUser.maxLoanLimit || 100000) / 1000)}K</span>
                 </div>
               </div>
