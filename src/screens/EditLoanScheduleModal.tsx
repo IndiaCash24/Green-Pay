@@ -45,26 +45,57 @@ export default function EditLoanScheduleModal({ loan, onClose }: { loan: LoanReq
        
        <div className="flex-1 overflow-y-auto px-5 py-6">
          <div className="bg-blue-50 border border-blue-100 rounded-[14px] p-4 mb-6">
-            <h3 className="text-[13px] font-bold text-blue-800 mb-2">Update All Pending Amounts</h3>
-            <div className="flex gap-2">
-              <input 
-                type="number"
-                id="bulkAmountInput"
-                placeholder="New Amount"
-                className="flex-1 bg-white border border-blue-200 rounded-[8px] px-3 py-2 text-[13px] font-semibold text-gray-900 outline-none focus:border-blue-500"
-              />
-              <button 
-                onClick={() => {
-                  const val = (document.getElementById('bulkAmountInput') as HTMLInputElement).value;
-                  const num = parseFloat(val);
-                  if (!isNaN(num)) {
-                    setSchedule(prev => prev.map(emi => emi.status === 'pending' ? { ...emi, amount: num } : emi));
-                  }
-                }}
-                className="bg-blue-600 text-white px-4 py-2 rounded-[8px] font-bold text-[12px] hover:bg-blue-700 transition"
-              >
-                Apply
-              </button>
+            <h3 className="text-[13px] font-bold text-blue-800 mb-2">Bulk Update Pending EMIs</h3>
+            
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2">
+                <input 
+                  type="number"
+                  id="bulkAmountInput"
+                  placeholder="New Amount (₹)"
+                  className="flex-1 bg-white border border-blue-200 rounded-[8px] px-3 py-2 text-[13px] font-semibold text-gray-900 outline-none focus:border-blue-500"
+                />
+                <button 
+                  onClick={() => {
+                    const val = (document.getElementById('bulkAmountInput') as HTMLInputElement).value;
+                    const num = parseFloat(val);
+                    if (!isNaN(num)) {
+                      setSchedule(prev => prev.map(emi => emi.status === 'pending' ? { ...emi, amount: num } : emi));
+                    }
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-[8px] font-bold text-[12px] hover:bg-blue-700 transition"
+                >
+                  Apply
+                </button>
+              </div>
+
+              <div className="flex gap-2">
+                <input 
+                  type="number"
+                  id="bulkDateInput"
+                  placeholder="Shift Dates by (Days)"
+                  className="flex-1 bg-white border border-blue-200 rounded-[8px] px-3 py-2 text-[13px] font-semibold text-gray-900 outline-none focus:border-blue-500"
+                />
+                <button 
+                  onClick={() => {
+                    const val = (document.getElementById('bulkDateInput') as HTMLInputElement).value;
+                    const days = parseInt(val, 10);
+                    if (!isNaN(days)) {
+                      setSchedule(prev => prev.map(emi => {
+                        if (emi.status === 'pending' && emi.dueDate) {
+                          const date = new Date(emi.dueDate);
+                          date.setDate(date.getDate() + days);
+                          return { ...emi, dueDate: date.toISOString() };
+                        }
+                        return emi;
+                      }));
+                    }
+                  }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-[8px] font-bold text-[12px] hover:bg-blue-700 transition"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
          </div>
        

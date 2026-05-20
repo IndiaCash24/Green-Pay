@@ -16,7 +16,9 @@ import {
 import { useAppContext, EMIInstallment, LoanRequest } from "../context/AppContext";
 import EditLoanScheduleModal from "./EditLoanScheduleModal";
 
-export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
+import { Screen } from "../App";
+
+export default function AdminDashboard({ onLogout, onNavigate, onSetEditLoanId }: { onLogout: () => void, onNavigate: (s: Screen) => void, onSetEditLoanId: (id: string) => void }) {
   const {
     totalUsers,
     paymentRequests,
@@ -36,7 +38,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
     "all" | "pending" | "approved" | "rejected"
   >("pending");
   const [activeTab, setActiveTab] = useState<"loans" | "payments" | "users" | "settings">("loans");
-  const [editingLoanId, setEditingLoanId] = useState<string | null>(null);
   const [editingUserLoanId, setEditingUserLoanId] = useState<string | null>(null);
   const [qrUrlInput, setQrUrlInput] = useState<string>(appSettings?.qrImageUrl || "");
 
@@ -254,13 +255,24 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                        </div>
                        
                        {currentLoan && !editingUserLoanId && (
-                           <div className="pt-2 border-t border-slate-50">
+                           <div className="pt-2 border-t border-slate-50 flex gap-2">
                               <button
                                  onClick={() => setEditingUserLoanId(currentLoan.id)}
-                                 className="w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-[10px] text-[12px] hover:bg-blue-100 transition"
+                                 className="flex-1 bg-blue-50 text-blue-600 font-bold py-2 rounded-[10px] text-[12px] hover:bg-blue-100 transition"
                                >
-                                 Edit Loan Details (₹{currentLoan.amount})
+                                 Edit Loan
                               </button>
+                              {currentLoan.status === "approved" && (
+                                <button
+                                   onClick={() => {
+                                     onSetEditLoanId(currentLoan.id);
+                                     onNavigate('admin-edit-schedule');
+                                   }}
+                                   className="flex-1 bg-slate-100 text-slate-700 font-bold py-2 rounded-[10px] text-[12px] hover:bg-slate-200 transition"
+                                 >
+                                   Manage Schedule
+                                </button>
+                              )}
                            </div>
                        )}
 
@@ -421,7 +433,10 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
                       {req.status === "approved" && (
                         <div className="flex space-x-3 mt-auto pt-2 border-t border-slate-100">
                           <button
-                            onClick={() => setEditingLoanId(req.id)}
+                            onClick={() => {
+                              onSetEditLoanId(req.id);
+                              onNavigate('admin-edit-schedule');
+                            }}
                             className="flex-1 flex items-center justify-center space-x-1.5 rounded-[12px] bg-slate-100 py-2.5 font-bold text-slate-700 transition hover:bg-slate-200 active:scale-[0.98]"
                           >
                             <Edit3 size={18} />
@@ -527,22 +542,6 @@ export default function AdminDashboard({ onLogout }: { onLogout: () => void }) {
           </AnimatePresence>
         </div>
       </div>
-
-      <AnimatePresence>
-         {editingLoanId && (
-            <motion.div 
-               initial={{ opacity: 0, y: 100 }}
-               animate={{ opacity: 1, y: 0 }}
-               exit={{ opacity: 0, y: 100 }}
-               className="absolute inset-0 z-50 overflow-hidden rounded-b-[40px] sm:rounded-[40px] bg-white flex flex-col"
-            >
-               <EditLoanScheduleModal 
-                  loan={loanRequests.find(l => l.id === editingLoanId)!} 
-                  onClose={() => setEditingLoanId(null)} 
-               />
-            </motion.div>
-         )}
-      </AnimatePresence>
     </motion.div>
   );
 }

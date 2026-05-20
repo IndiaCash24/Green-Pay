@@ -17,10 +17,11 @@ import { AppProvider, useAppContext } from './context/AppContext';
 import Repayment from './screens/Repayment';
 import PaymentGateway from './screens/PaymentGateway';
 import PaymentHistory from './screens/PaymentHistory';
+import EditLoanScheduleModal from './screens/EditLoanScheduleModal';
 
 import MyLoanDetails from './screens/MyLoanDetails';
 
-export type Screen = 'splash' | 'login' | 'home' | 'profile' | 'admin-login' | 'admin' | 'notifications' | 'repayment' | 'payment-gateway' | 'payment-history' | 'my-loan-details';
+export type Screen = 'splash' | 'login' | 'home' | 'profile' | 'admin-login' | 'admin' | 'admin-edit-schedule' | 'notifications' | 'repayment' | 'payment-gateway' | 'payment-history' | 'my-loan-details';
 
 export default function App() {
   return (
@@ -33,7 +34,8 @@ export default function App() {
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
   const [paymentData, setPaymentData] = useState<{loanId: string, emiIds: string[], amount: number} | null>(null);
-  const { currentUser } = useAppContext();
+  const [adminEditLoanId, setAdminEditLoanId] = useState<string | null>(null);
+  const { currentUser, loanRequests } = useAppContext();
 
   useEffect(() => {
     if (currentScreen === 'splash') {
@@ -71,7 +73,12 @@ function AppContent() {
       {currentScreen === 'splash' && <Splash />}
       {currentScreen === 'login' && <Login onLogin={() => onNavigate('home')} />}
       {currentScreen === 'admin-login' && <AdminLogin onBack={() => onNavigate('profile')} onLogin={() => onNavigate('admin')} />}
-      {currentScreen === 'admin' && <AdminDashboard onLogout={() => onNavigate('profile')} />}
+      {currentScreen === 'admin' && <AdminDashboard onLogout={() => onNavigate('profile')} onNavigate={onNavigate} onSetEditLoanId={setAdminEditLoanId} />}
+      {currentScreen === 'admin-edit-schedule' && adminEditLoanId && loanRequests.find(l => l.id === adminEditLoanId) && (
+         <div className="absolute inset-0 z-50 overflow-hidden bg-white flex flex-col">
+           <EditLoanScheduleModal loan={loanRequests.find(l => l.id === adminEditLoanId)!} onClose={() => onNavigate('admin')} />
+         </div>
+      )}
       
       {(currentScreen === 'home' || currentScreen === 'profile' || currentScreen === 'notifications' || currentScreen === 'repayment' || currentScreen === 'payment-gateway' || currentScreen === 'payment-history' || currentScreen === 'my-loan-details') && (
         <MainLayout currentScreen={currentScreen} onNavigate={onNavigate}>
