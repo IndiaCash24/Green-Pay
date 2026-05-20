@@ -416,6 +416,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateLoanSchedule = async (loanId: string, schedule: EMIInstallment[]) => {
     try {
       await updateDoc(doc(db, "loans", loanId), { schedule });
+      
+      const loan = loanRequests.find(l => l.id === loanId);
+      if (loan) {
+        await addDoc(collection(db, "notifications"), {
+          userId: loan.userId,
+          title: "Loan Schedule Updated",
+          message: "Your loan repayment schedule has been updated by the admin.",
+          date: new Date().toISOString(),
+          read: false
+        });
+      }
     } catch (error) {
       console.error(error);
     }
@@ -440,6 +451,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateUserLimit = async (userId: string, limit: number) => {
     try {
       await updateDoc(doc(db, "users", userId), { maxLoanLimit: limit });
+      await addDoc(collection(db, "notifications"), {
+        userId,
+        title: "Loan Limit Updated",
+        message: `Your maximum loan limit has been updated to ₹${limit.toLocaleString('en-IN')}.`,
+        date: new Date().toISOString(),
+        read: false
+      });
     } catch (error) {
       console.error(error);
     }
